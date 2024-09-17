@@ -1,138 +1,100 @@
-use crate::token::Token;
+use std::fmt;
 
-// Define a unified Node enum
-#[derive(Debug, Clone)]
-pub enum Node {
-  Program(Program),
-  Statement(Statement),
+pub type BlockStatement = Vec<Statement>;
+pub type Program = BlockStatement;
+
+#[derive(PartialEq, Clone, Debug)]
+pub struct Identifier(pub String);
+
+#[derive(PartialEq, Clone, Debug)]
+pub enum Statement {
+  Forge(Identifier, Expression),
+  Ignite(Expression),
   Expression(Expression),
 }
 
-// Define Statement enum
-#[derive(Debug, Clone)]
-pub enum Statement {
-  ForgeStatement(ForgeStatement),
-  IgniteStatement(IgniteStatement),
-  ExpressionStatement(ExpressionStatement),
-  BlockStatement(BlockStatement),
-}
-
-// Define Expression enum
-#[derive(Debug, Clone)]
+#[derive(PartialEq, Clone, Debug)]
 pub enum Expression {
   Identifier(Identifier),
-  IntegerLiteral(IntegerLiteral),
-  PrefixExpression(PrefixExpression),
-  InfixExpression(InfixExpression),
-  Boolean(Boolean),
-  IfExpression(IfExpression),
-  FunctionLiteral(FunctionLiteral),
-  CallExpression(CallExpression),
+  Literal(Literal),
+  Prefix(Prefix, Box<Expression>),
+  Infix(Infix, Box<Expression>, Box<Expression>),
+  If {
+    cond: Box<Expression>,
+    consequence: Box<Statement>,
+    alternative: Option<BlockStatement>,
+  },
+  Function {
+    parameters: Vec<Identifier>,
+    body: BlockStatement,
+  },
+  Call {
+    function: Box<Expression>,
+    arguments: Vec<Expression>,
+  },
 }
 
-// The existing structs remain mostly the same
-pub struct Program {
-  pub statements: Vec<Statement>,
+#[derive(PartialEq, Clone, Debug)]
+pub enum Literal {
+  Integer(i64),
+  String(String),
+  Boolean(bool),
 }
 
-pub struct ForgeStatement {
-  pub token: Token,
-  pub name: Identifier,
-  pub value: Option<Expression>,
+#[derive(PartialEq, Clone, Debug)]
+pub enum Prefix {
+  Plus,
+  Minus,
+  Not,
 }
 
-pub struct Identifier {
-  pub token: Token,
-  pub value: String,
-}
-
-pub struct IgniteStatement {
-  pub token: Token,
-  pub return_value: Option<Box<Expression>>,
-}
-
-pub struct ExpressionStatement {
-  pub token: Token,
-  pub expression: Option<Box<Expression>>,
-}
-
-pub struct IntegerLiteral {
-  pub token: Token,
-  pub value: i64,
-}
-
-pub struct PrefixExpression {
-  pub token: Token,
-  pub operator: String,
-  pub right: Option<Box<Expression>>,
-}
-
-pub struct InfixExpression {
-  pub token: Token,
-  pub left: Option<Box<Expression>>,
-  pub operator: String,
-  pub right: Option<Box<Expression>>,
-}
-
-pub struct Boolean {
-  pub token: Token,
-  pub value: bool,
-}
-
-pub struct BlockStatement {
-  pub token: Token,
-  pub statements: Vec<Box<Statement>>,
-}
-
-pub struct IfExpression {
-  pub token: Token,
-  pub condition: Option<Box<Expression>>,
-  pub consequence: Option<BlockStatement>,
-  pub alternative: Option<BlockStatement>,
-}
-
-pub struct FunctionLiteral {
-  pub token: Token,
-  pub parameters: Vec<Identifier>,
-  pub body: Option<BlockStatement>,
-}
-
-pub struct CallExpression {
-  pub token: Token,
-  pub function: Option<Box<Expression>>,
-  pub arguments: Vec<Box<Expression>>,
-}
-
-#[cfg(test)]
-mod tests {
-  use super::*;
-  use crate::token::TokenType;
-
-  #[test]
-  fn test_string_value() {
-    let program = Program {
-      statements: vec![Box::new(ForgeStatement {
-        token: Token {
-          token_type: TokenType::Forge,
-          literal: String::from("forge"),
-        },
-        name: Identifier {
-          token: Token {
-            token_type: TokenType::Ident,
-            literal: String::from("myForge"),
-          },
-          value: String::from("myForge"),
-        },
-        value: Some(Box::new(Identifier {
-          token: Token {
-            token_type: TokenType::Ident,
-            literal: String::from("anotherForge"),
-          },
-          value: String::from("anotherForge"),
-        })),
-      })],
-    };
-
-    assert_eq!(program.string(), "forge myForge = anotherForge;");
+impl fmt::Display for Prefix {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    match *self {
+      Prefix::Plus => write!(f, "+"),
+      Prefix::Minus => write!(f, "-"),
+      Prefix::Not => write!(f, "!"),
+    }
   }
+}
+
+#[derive(PartialEq, Clone, Debug)]
+pub enum Infix {
+  Plus,
+  Minus,
+  Multiply,
+  Divide,
+  Equal,
+  NotEqual,
+  GreaterThan,
+  LessThan,
+}
+
+impl fmt::Display for Infix {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    match *self {
+      Infix::Plus => write!(f, "+"),
+      Infix::Minus => write!(f, "-"),
+      Infix::Divide => write!(f, "/"),
+      Infix::Multiply => write!(f, "*"),
+      Infix::Equal => write!(f, "=="),
+      Infix::NotEqual => write!(f, "!="),
+      Infix::GreaterThanEqual => write!(f, ">="),
+      Infix::GreaterThan => write!(f, ">"),
+      Infix::LessThanEqual => write!(f, "<="),
+      Infix::LessThan => write!(f, "<"),
+    }
+  }
+}
+
+#[derive(PartialEq, PartialOrd, Debug, Clone)]
+pub enum Precedence {
+  Lowest,
+  Equals,
+  LessGreater,
+  Sum,
+  Product,
+  Prefix,
+  Call,
+  Index,
 }
